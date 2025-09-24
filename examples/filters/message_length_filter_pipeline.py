@@ -49,7 +49,7 @@ class Pipeline:
 
         # Input validation
         target_user_roles: List[str] = ["user"]
-        max_user_message_chars: Optional[int] = int(os.getenv("MAX_USER_MESSAGE_CHARS", "4000"))
+        max_user_message_chars: Optional[int] = int(os.getenv("MAX_USER_MESSAGE_CHARS", "10000"))
 
         # Output limits
         # If set, we will constrain generation length via tokens only

@@ -7,22 +7,15 @@ license: MIT
 description: Logs prompts and responses to console in a dedicated audit-log JSON format.
 """
 
+from utils.pipelines.main import get_last_assistant_message, get_last_user_message
 from typing import List, Optional, Any
 from pydantic import BaseModel
 from datetime import datetime, timezone
 
-from open_webui.models.users import Users
-
 import os
 import json
 import uuid
-
-
-def _get_last_message_by_roles(messages: List[dict], roles: List[str]) -> Optional[dict]:
-    for message in reversed(messages):
-        if message.get("role") in roles:
-            return message
-    return None
+import traceback
 
 
 def _extract_text(content: Any) -> str:
@@ -82,23 +75,18 @@ class Pipeline:
             or str(uuid.uuid4())
         )
 
-        caller_ip = (
-            (user.get("ip") if user else None)
-            or body.get("ip")
-            or ""
-        )
-
         # Extract and store both model name and ID if available
         model_id = body.get("model")
 
         return {
+            "log-type": "audit",
             "timestamp": now,
             "trace-id": trace_id,
             "service-name": self.valves.service_name,
             "service-version": self.valves.service_version,
             "environment": self.valves.environment,
             "audit-log-type": "access",
-            "caller-ip": caller_ip,
+            "caller-ip": "",
             "subject-id": user,
             "owner-id": user,
             "resource-type": model_id,
@@ -112,51 +100,59 @@ class Pipeline:
             print(json.dumps({"audit-log-error": str(e)}))
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        metadata = body.get("metadata", {})
-        chat_id = metadata.get("chat_id", str(uuid.uuid4()))
+        try:
+            metadata = body.get("metadata", {})
+            chat_id = metadata.get("chat_id", str(uuid.uuid4()))
 
-        # Handle temporary chats
-        if chat_id == "local":
-            session_id = metadata.get("session_id")
-            chat_id = f"temporary-session-{session_id}"
+            # Handle temporary chats
+            if chat_id == "local":
+                session_id = metadata.get("session_id")
+                chat_id = f"temporary-session-{session_id}"
 
-        metadata["chat_id"] = chat_id
-        body["metadata"] = metadata
+            metadata["chat_id"] = chat_id
+            body["metadata"] = metadata
 
-        base = self._base_log(body, user)
-        base["event-type"] = "user_input"
+            base = self._base_log(body, user)
+            base["event-type"] = "user_input"
 
-        if self.valves.include_content:
-            last_user = _get_last_message_by_roles(body.get("messages", []), ["user"]) or {}
-            base["additional-data"] = _extract_text(last_user.get("content"))
-        else:
-            base["additional-data"] = ""
+            if self.valves.include_content:
+                user_message = get_last_user_message(body["messages"])
+                base["additional-data"] = user_message
+            else:
+                base["additional-data"] = ""
 
-        self._print_log(base)
+            self._print_log(base)
+        except Exception as e:
+            print(f"Error: {e}")
+            print(traceback.format_exc())
+            return body
         return body
 
     async def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        metadata = body.get("metadata", {})
-        chat_id = body.get("chat_id")
+        try:
+            metadata = body.get("metadata", {})
+            chat_id = body.get("chat_id")
 
-        # Handle temporary chats
-        if chat_id == "local":
-            session_id = body.get("session_id")
-            chat_id = f"temporary-session-{session_id}"
+            # Handle temporary chats
+            if chat_id == "local":
+                session_id = body.get("session_id")
+                chat_id = f"temporary-session-{session_id}"
 
-        metadata["chat_id"] = chat_id
-        body["metadata"] = metadata
+            metadata["chat_id"] = chat_id
+            body["metadata"] = metadata
 
-        base = self._base_log(body, user)
-        base["event-type"] = "llm_response"
+            base = self._base_log(body, user)
+            base["event-type"] = "llm_response"
 
-        if self.valves.include_content:
-            last_assistant = _get_last_message_by_roles(body.get("messages", []), ["assistant"]) or {}
-            base["additional-data"] = _extract_text(last_assistant.get("content"))
-        else:
-            base["additional-data"] = ""
+            if self.valves.include_content:
+                assistant_message = get_last_assistant_message(body["messages"])
+                base["additional-data"] = assistant_message
+            else:
+                base["additional-data"] = ""
 
-        self._print_log(base)
+            self._print_log(base)
+        except Exception as e:
+            print(f"Error: {e}")
+            print(traceback.format_exc())
+            return body
         return body
-
-

@@ -1,6 +1,6 @@
 """
 title: Audit Log Filter
-author: open-webui
+author: David Weese
 date: 2025-09-30
 version: 1.0
 license: MIT

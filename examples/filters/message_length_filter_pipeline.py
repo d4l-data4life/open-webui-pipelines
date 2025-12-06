@@ -10,6 +10,7 @@ description: Filter that enforces maximum input message length and caps/truncate
 from typing import List, Optional, Any
 from pydantic import BaseModel
 from schemas import OpenAIChatMessage
+from fastapi import HTTPException, status
 import os
 import math
 
@@ -88,8 +89,9 @@ class Pipeline:
             if last_target_msg:
                 length = _compute_text_length(last_target_msg.get("content"))
                 if length > max_chars:
-                    raise Exception(
-                        f"Your input message with {length} characters exceeds the limit of {max_chars} characters, please shorten your request."
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"Your input message with {length} characters exceeds the limit of {max_chars} characters, please shorten your request.",
                     )
 
         # Enforce output cap via tokens (top-level and options)

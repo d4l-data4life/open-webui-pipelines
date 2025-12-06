@@ -162,7 +162,7 @@ class Pipeline:
         return ""
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        if user.get("role", "admin") == "user":
+        if user.get("role", "admin") == "user" || True:
             user_id = user["id"] if user and "id" in user else "default_user"
             rate_limit_message = self.rate_limited(user_id)
             if rate_limit_message:

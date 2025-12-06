@@ -10,6 +10,7 @@ description: Filter that enforces maximum input message length and caps/truncate
 from typing import List, Optional, Any
 from pydantic import BaseModel
 from schemas import OpenAIChatMessage
+from fastapi import HTTPException, status
 import os
 import math
 

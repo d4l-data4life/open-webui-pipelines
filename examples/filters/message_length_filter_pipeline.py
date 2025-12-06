@@ -69,6 +69,9 @@ class Pipeline:
             }
         )
 
+        # Only these tasks will be treated as LLM "generations":
+        self.GENERATION_TASKS = {"generation"}
+
     def _apply_output_token_cap(self, body: dict):
         # Enforce explicit token cap only
         desired_tokens = self.valves.max_assistant_response_tokens
@@ -82,20 +85,22 @@ class Pipeline:
         body["options"] = options
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        # Debug log all information we have
-        print(f"Inlet function called with body: {body} and user: {user}")
-        
-        # Validate input message length
-        max_chars = self.valves.max_user_message_chars
-        if max_chars and max_chars > 0:
-            last_target_msg = _get_last_message_by_roles(body.get("messages", []), self.valves.target_user_roles)
-            if last_target_msg:
-                length = _compute_text_length(last_target_msg.get("content"))
-                if length > max_chars:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail=f"Your input message with {length} characters exceeds the limit of {max_chars} characters, please shorten your request.",
-                    )
+        metadata = body.get("metadata", {})
+        task_name = metadata.get("task", "generation")
+
+        # If it's a task that is considered an LLM generation
+        if task_name in self.GENERATION_TASKS:            
+            # Validate input message length
+            max_chars = self.valves.max_user_message_chars
+            if max_chars and max_chars > 0:
+                last_target_msg = _get_last_message_by_roles(body.get("messages", []), self.valves.target_user_roles)
+                if last_target_msg:
+                    length = _compute_text_length(last_target_msg.get("content"))
+                    if length > max_chars:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=f"Your input message with {length} characters exceeds the limit of {max_chars} characters, please shorten your request.",
+                        )
 
         # Enforce output cap via tokens (top-level and options)
         self._apply_output_token_cap(body)

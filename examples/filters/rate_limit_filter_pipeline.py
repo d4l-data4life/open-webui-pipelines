@@ -68,6 +68,9 @@ class Pipeline:
         # Tracking data - user_id -> (timestamps of requests)
         self.user_requests = {}
 
+        # Only these tasks will be treated as LLM "generations":
+        self.GENERATION_TASKS = {"generation"}
+
     async def on_startup(self):
         # This function is called when the server is started.
         print(f"on_startup:{__name__}")
@@ -165,7 +168,11 @@ class Pipeline:
         return ""
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        if user.get("role", "admin") == "user" or True:
+        metadata = body.get("metadata", {})
+        task_name = metadata.get("task", "generation")
+
+        # If it's a task that is considered an LLM generation
+        if task_name in self.GENERATION_TASKS:            
             user_id = user["id"] if user and "id" in user else "default_user"
             rate_limit_message = self.rate_limited(user_id)
             if rate_limit_message:

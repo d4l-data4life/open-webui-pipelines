@@ -49,11 +49,11 @@ class Pipeline:
 
         # Input validation
         target_user_roles: List[str] = ["user"]
-        max_user_message_chars: Optional[int] = int(os.getenv("MAX_USER_MESSAGE_CHARS", "4000"))
+        max_user_message_chars: Optional[int] = int(os.getenv("MAX_USER_MESSAGE_CHARS", "20000"))
 
         # Output limits
         # If set, we will constrain generation length via tokens only
-        max_assistant_response_tokens: Optional[int] = None
+        max_assistant_response_tokens: Optional[int] = int(os.getenv("MAX_RESPONSE_TOKENS", "8192"))
 
     def __init__(self):
         # Pipeline filters are only compatible with Open WebUI
@@ -89,7 +89,7 @@ class Pipeline:
                 length = _compute_text_length(last_target_msg.get("content"))
                 if length > max_chars:
                     raise Exception(
-                        f"Input message exceeds limit: {length} > {max_chars} characters."
+                        f"Your input message with {length} characters exceeds the limit of {max_chars} characters, please shorten your request."
                     )
 
         # Enforce output cap via tokens (top-level and options)

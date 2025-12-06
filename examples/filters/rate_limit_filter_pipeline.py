@@ -183,7 +183,7 @@ class Pipeline:
                 base = self._base_log(body, user)
                 base["message"] = rate_limit_message
 
-                self._print_log(self._base_log(body, user))
+                self._print_log(base)
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=f"{rate_limit_message}. Please try again later.",

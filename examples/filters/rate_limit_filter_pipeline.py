@@ -1,10 +1,13 @@
-import os
 from typing import List, Optional
 from pydantic import BaseModel
 from schemas import OpenAIChatMessage
 from fastapi import HTTPException, status
-import time
+from datetime import datetime, timezone
 
+import os
+import time
+import json
+import uuid
 
 class Pipeline:
     class Valves(BaseModel):
@@ -147,22 +150,22 @@ class Pipeline:
         if self.valves.requests_per_minute is not None:
             requests_last_minute = sum(1 for req in user_reqs if time.time() - req < 60)
             if requests_last_minute >= self.valves.requests_per_minute:
-                return "Requests per minute limit exceeded"
+                return f"Limit of {self.valves.requests_per_minute} requests per minute exceeded"
 
         if self.valves.requests_per_hour is not None:
             requests_last_hour = sum(1 for req in user_reqs if time.time() - req < 3600)
             if requests_last_hour >= self.valves.requests_per_hour:
-                return "Requests per hour limit exceeded"
+                return f"Limit of {self.valves.requests_per_hour} requests per hour exceeded"
 
         if self.valves.sliding_window_limit is not None:
             requests_in_window = len(user_reqs)
             if requests_in_window >= self.valves.sliding_window_limit:
-                return "Sliding window limit exceeded"
+                return f"Limits of {self.valves.sliding_window_limit} requests per {self.valves.sliding_window_minutes} minutes exceeded"
 
         return ""
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        if user.get("role", "admin") == "user" || True:
+        if user.get("role", "admin") == "user" or True:
             user_id = user["id"] if user and "id" in user else "default_user"
             rate_limit_message = self.rate_limited(user_id)
             if rate_limit_message:
@@ -180,7 +183,7 @@ class Pipeline:
                 base = self._base_log(body, user)
                 base["message"] = rate_limit_message
 
-                self._print_log(self._base_log(body, user))
+                self._print_log(base)
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=f"{rate_limit_message}. Please try again later.",

@@ -89,7 +89,7 @@ class Pipeline:
                 length = _compute_text_length(last_target_msg.get("content"))
                 if length > max_chars:
                     raise Exception(
-                        f"Input message exceeds limit: {length} > {max_chars} characters."
+                        f"Your input message with {length} characters exceeds the limit of {max_chars} characters, please shorten your request."
                     )
 
         # Enforce output cap via tokens (top-level and options)

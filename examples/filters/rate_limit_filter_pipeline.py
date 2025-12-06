@@ -150,17 +150,17 @@ class Pipeline:
         if self.valves.requests_per_minute is not None:
             requests_last_minute = sum(1 for req in user_reqs if time.time() - req < 60)
             if requests_last_minute >= self.valves.requests_per_minute:
-                return f"Requests per minute limit ({self.valves.requests_per_minute}) exceeded"
+                return f"Limit of {self.valves.requests_per_minute} requests per minute limit exceeded"
 
         if self.valves.requests_per_hour is not None:
             requests_last_hour = sum(1 for req in user_reqs if time.time() - req < 3600)
             if requests_last_hour >= self.valves.requests_per_hour:
-                return f"Requests per hour limit ({self.valves.requests_per_hour}) exceeded"
+                return f"Limit of {self.valves.requests_per_hour} requests per hour exceeded"
 
         if self.valves.sliding_window_limit is not None:
             requests_in_window = len(user_reqs)
             if requests_in_window >= self.valves.sliding_window_limit:
-                return f"Requests per sliding window limit ({self.valves.sliding_window_limit}) exceeded"
+                return f"Limits of {self.valves.sliding_window_limit} requests per {self.valves.sliding_window_minutes} minutes limit exceeded"
 
         return ""
 

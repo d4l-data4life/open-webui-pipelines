@@ -82,6 +82,9 @@ class Pipeline:
         body["options"] = options
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        # Debug log all information we have
+        print(f"Inlet function called with body: {body} and user: {user}")
+        
         # Validate input message length
         max_chars = self.valves.max_user_message_chars
         if max_chars and max_chars > 0:
